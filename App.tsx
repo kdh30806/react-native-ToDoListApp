@@ -1,118 +1,112 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
-
-import React from 'react';
-import type {PropsWithChildren} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
-  SafeAreaView,
   ScrollView,
-  StatusBar,
-  StyleSheet,
   Text,
-  useColorScheme,
+  TextInput,
+  TextProps,
+  TouchableOpacity,
   View,
 } from 'react-native';
+import styled from 'styled-components/native';
+import {theme} from './colors';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+const Container = styled.View`
+  flex: 1;
+  background-color: ${theme.bg};
+  padding: 0px 20px;
+`;
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
+const Header = styled.View`
+  flex-direction: row;
+  margin-top: 100px;
+  justify-content: space-between;
+`;
 
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-}
+const MenuBtn = styled.Text<{working: boolean}>`
+  font-size: 44px;
+  font-weight: 600;
+  color: ${props => (props.working ? theme.grey : theme.white)};
+`;
 
-function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
+const Input = styled.TextInput`
+  background-color: white;
+  padding: 15px 20px;
+  border-radius: 20px;
+  margin-top: 20px;
+  margin-bottom: 10px;
+  font-size: 18px;
+`;
 
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+const ToDoView = styled.View`
+  background-color: ${theme.grey};
+  margin-bottom: 10px;
+  padding: 20px 20px;
+  border-radius: 15px;
+`;
+const ToDoText = styled.Text`
+  color: white;
+  font-size: 16px;
+  font-weight: 500;
+`;
+
+const STORAGE_KEY = '@toDos';
+
+const App = () => {
+  const [working, setWorking] = useState(true);
+  const [text, setText] = useState('');
+  const [toDos, setToDos] = useState({});
+  const travle = () => setWorking(false);
+  const work = () => setWorking(true);
+  const onChangeText = (payload: string) => setText(payload);
+  const saveToDos = async toSave => {
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
   };
-
+  const loadToDos = async () => {
+    const s = await AsyncStorage.getItem(STORAGE_KEY);
+    setToDos(JSON.parse(s));
+  };
+  useEffect(() => {
+    loadToDos();
+  }, []);
+  const addToDo = async () => {
+    if (text === '') {
+      return;
+    }
+    const newToDos = {...toDos, [Date.now()]: {text: text, working: working}};
+    setToDos(newToDos);
+    await saveToDos(newToDos);
+    setText('');
+  };
   return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
+    <Container>
+      <Header>
+        <TouchableOpacity onPress={work}>
+          <MenuBtn working={!working}>Work</MenuBtn>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={travle}>
+          <MenuBtn working={working}>Travel</MenuBtn>
+        </TouchableOpacity>
+      </Header>
+      <Input
+        onSubmitEditing={addToDo}
+        onChangeText={onChangeText}
+        returnKeyType="done"
+        value={text}
+        placeholder={
+          working ? '할일을 작성해주세요.' : '어디로 가고 싶나요?'
+        }></Input>
+      <ScrollView>
+        {Object.keys(toDos).map(key =>
+          toDos[key].working === working ? (
+            <ToDoView key={key}>
+              <ToDoText>{toDos[key].text}</ToDoText>
+            </ToDoView>
+          ) : null,
+        )}
       </ScrollView>
-    </SafeAreaView>
+    </Container>
   );
-}
-
-const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
-  },
-});
+};
 
 export default App;
